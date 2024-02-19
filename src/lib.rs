@@ -80,8 +80,16 @@ impl CashFlow {
     }
 
     fn pv(&self, rate: f64, as_of: Date) -> f64 {
-        let self_date = NaiveDate::from_ymd_opt(self.date.year, self.date.month.into(), self.date.day.into()).unwrap();
-        let as_of_date = NaiveDate::from_ymd_opt(as_of.year, as_of.month.into(), as_of.day.into()).unwrap();
+        let self_date = NaiveDate::from_ymd_opt(
+            self.date.year,
+            self.date.month.into(),
+            self.date.day.into()
+        ).unwrap();
+        let as_of_date = NaiveDate::from_ymd_opt(
+            as_of.year,
+            as_of.month.into(), 
+            as_of.day.into()
+        ).unwrap();
 
         let year_frac = (self_date - as_of_date).num_days() as f64 / 365.25;
         self.amount / (1.0 + rate).powf(year_frac)
@@ -168,11 +176,13 @@ impl Bond {
     }
 
     fn __str__(&self) -> PyResult<String> {
-        Ok(format!("Bond(maturity={}, coupon={}, principal={})", self.maturity, self.coupon, self.principal))
+        Ok(format!("Bond(maturity={}, coupon={}, principal={})",
+         self.maturity, self.coupon, self.principal))
     }
 
     fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("Bond(maturity={}, coupon={}, principal={})", self.maturity, self.coupon, self.principal))
+        Ok(format!("Bond(maturity={}, coupon={}, principal={})",
+         self.maturity, self.coupon, self.principal))
     }
 
     fn cash_flows(&self, as_of: Date) -> CashFlowList {
@@ -180,7 +190,9 @@ impl Bond {
         for year in as_of.borrow().year..self.maturity.year {
             cash_flows.add(CashFlow::new(self.coupon, Date::new(1, 1, year)));
         }
-        cash_flows.add(CashFlow::new(self.coupon + self.principal, self.maturity.clone()));
+        cash_flows.add(CashFlow::new(
+            self.coupon + self.principal, self.maturity.clone())
+        );
         cash_flows
     }
 
@@ -188,6 +200,7 @@ impl Bond {
         self.cash_flows(as_of.clone()).npv(rate, as_of)
     }
 }
+
 
 
 

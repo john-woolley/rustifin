@@ -2,6 +2,8 @@ from datetime import date, timedelta
 from timeit import timeit
 from rustifin import Bond as RustBond
 
+
+
 class CashFlow:
     def __init__(self, amount, date: date):
         self.amount = amount
@@ -54,6 +56,87 @@ class Bond:
 
     def price(self, rate, as_of):
         return self.cash_flows(as_of).npv(rate, as_of)
+    
+class UncertainCashFlow(CashFlow):
+    def __init__(self, amount, date: date, prob):
+        super().__init__(amount, date)
+        self.prob = prob
+
+    def __str__(self):
+        return f"UncertainCashFlow(amount={self.amount}, date={self.date}, prob={self.prob})"
+
+    def __repr__(self):
+        return f"UncertainCashFlow(amount={self.amount}, date={self.date}, prob={self.prob})"
+
+    def pv(self, rate, as_of):
+        return self.amount * self.prob / (1.0 + rate) ** ((self.date - as_of).days / 365.25)
+    
+
+class FXCashFlow(CashFlow):
+    def __init__(self, amount, date: date, fx_rate):
+        super().__init__(amount, date)
+        self.fx_rate = fx_rate
+
+    def __str__(self):
+        return f"FXCashFlow(amount={self.amount}, date={self.date}, fx_rate={self.fx_rate})"
+
+    def __repr__(self):
+        return f"FXCashFlow(amount={self.amount}, date={self.date}, fx_rate={self.fx_rate})"
+
+    def pv(self, rate, as_of):
+        return self.amount * self.fx_rate / (1.0 + rate) ** ((self.date - as_of).days / 365.25)    
+    
+class UncertainFXCashFlow(CashFlow):
+    def __init__(self, amount, date: date, fx_rate, prob):
+        super().__init__(amount, date)
+        self.fx_rate = fx_rate
+        self.prob = prob
+
+    def __str__(self):
+        return f"UncertainFXCashFlow(amount={self.amount}, date={self.date}, fx_rate={self.fx_rate}, prob={self.prob})"
+
+    def __repr__(self):
+        return f"UncertainFXCashFlow(amount={self.amount}, date={self.date}, fx_rate={self.fx_rate}, prob={self.prob})"
+
+    def pv(self, rate, as_of):
+        return self.amount * self.fx_rate * self.prob / (1.0 + rate) ** ((self.date - as_of).days / 365.25)
+    
+class FXBond(Bond):
+    def __init__(self, maturity, coupon, principal, fx_rate):
+        super().__init__(maturity, coupon, principal)
+        self.fx_rate = fx_rate
+
+    def __str__(self):
+        return f"FXBond(maturity={self.maturity}, coupon={self.coupon}, principal={self.principal}, fx_rate={self.fx_rate})"
+
+    def __repr__(self):
+        return f"FXBond(maturity={self.maturity}, coupon={self.coupon}, principal={self.principal}, fx_rate={self.fx_rate})"
+
+    def cash_flows(self, as_of):
+        cash_flows = CashFlowList()
+        for year in range(as_of.year, self.maturity.year):
+            cash_flows.add(FXCashFlow(self.coupon, date(year, 1, 1), self.fx_rate))
+        cash_flows.add(FXCashFlow(self.coupon + self.principal, self.maturity, self.fx_rate))
+        return cash_flows
+    
+class UncertainFXBond(FXBond):
+    def __init__(self, maturity, coupon, principal, fx_rate, prob):
+        super().__init__(maturity, coupon, principal, fx_rate)
+        self.prob = prob
+
+    def __str__(self):
+        return f"UncertainFXBond(maturity={self.maturity}, coupon={self.coupon}, principal={self.principal}, fx_rate={self.fx_rate}, prob={self.prob})"
+
+    def __repr__(self):
+        return f"UncertainFXBond(maturity={self.maturity}, coupon={self.coupon}, principal={self.principal}, fx_rate={self.fx_rate}, prob={self.prob})"
+
+    def cash_flows(self, as_of):
+        cash_flows = CashFlowList()
+        for year in range(as_of.year, self.maturity.year):
+            cash_flows.add(UncertainFXCashFlow(self.coupon, date(year, 1, 1), self.fx_rate, self.prob))
+        cash_flows.add(UncertainFXCashFlow(self.coupon + self.principal, self.maturity, self.fx_rate, self.prob))
+        return cash_flows
+    
     
 if __name__ == '__main__':
 
